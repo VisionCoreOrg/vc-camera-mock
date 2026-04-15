@@ -1,0 +1,16 @@
+services:
+  camera_mock:
+    build: .
+    container_name: vc_camera_mock
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Monta a pasta local de imagens como somente-leitura dentro do container
+      - ./dataset:/app/dataset:ro
+    networks:
+      - parking_global_net
+
+networks:
+  parking_global_net:
+    external: true
