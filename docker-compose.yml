@@ -2,7 +2,7 @@ services:
   camera_mock:
     build: .
     container_name: vc_camera_mock
-    restart: unless-stopped
+    restart: "no"
     env_file:
       - .env
     volumes:
