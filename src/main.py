@@ -1,3 +1,5 @@
+import sys
+import pathlib
 import time
 from datetime import datetime, timezone
 
@@ -6,9 +8,16 @@ from src.services.frame_picker import FramePicker
 from src.services.storage_service import upload_frame
 from src.services.redis_service import connect_with_retry, publish_frame_event
 
+FLAG_FILE = pathlib.Path("/tmp/mock_manual_started")
+
 
 def run() -> None:
     """Loop principal do mock de câmera."""
+    if not FLAG_FILE.exists():
+        FLAG_FILE.touch()
+        print("📷 [CAMERA MOCK] Início automático abortado. Aguardando inicialização via interface.")
+        sys.exit(0)
+
     print("🚀 VisionCore Camera Mock — Iniciado!")
     print(f"📷 Câmera ID : {CAMERA_ID}")
     print(f"⏱  Intervalo : {INTERVAL_SECONDS}s entre frames")
