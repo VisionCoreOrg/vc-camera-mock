@@ -46,17 +46,17 @@ A cada `INTERVAL_SECONDS`, o loop:
 | `INTERVAL_SECONDS` | `5` | Intervalo em segundos entre disparos |
 | `FRAME_MODE` | `sequential` | Modo de seleção: `sequential` ou `random` |
 | `DATASET_PATH` | `./dataset` | Caminho local das imagens |
-| `MINIO_ENDPOINT` | `http://visioncore_minio:9000` | Endpoint MinIO |
+| `MINIO_ENDPOINT` | `http://visioncore_minio:9000` | Endpoint MinIO (pinado no compose standalone e no raiz) |
 | `MINIO_ROOT_USER` | — | Access key MinIO |
 | `MINIO_ROOT_PASSWORD` | — | Secret key MinIO |
 | `MINIO_BUCKET_NAME` | `plate-bucket` | Bucket de destino |
 | `MINIO_DATASET_PREFIX` | `dataset` | Prefixo dentro do bucket |
-| `REDIS_HOST` | `parking_redis` | Host Redis |
+| `REDIS_HOST` | `parking_redis` | Host Redis (pinado no compose standalone e no raiz) |
 | `REDIS_PORT` | `6379` | Porta Redis |
 | `REDIS_PASSWORD` | — | Senha Redis |
 | `REDIS_QUEUE` | `camera:portaria:queue` | Nome da fila Redis |
 
-No Docker Compose raiz, `REDIS_HOST` e `MINIO_ENDPOINT` são sobrescritos pelos nomes de serviço Docker.
+Nos composes (raiz e standalone), REDIS_HOST e MINIO_ENDPOINT são pinados via environment — o .env fornece apenas segredos e knobs (CAMERA_ID, INTERVAL_SECONDS, FRAME_MODE).
 
 ## Dataset
 
@@ -78,6 +78,8 @@ python3 -m src.main
 ```
 
 ## Docker (standalone)
+
+O stack sobe Redis e MinIO próprios; eventos acumulam na fila local (sem worker).
 
 ```bash
 docker compose up --build

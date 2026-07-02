@@ -18,7 +18,7 @@ A cada intervalo configurável, seleciona uma imagem do dataset local, faz o upl
 
 Os seguintes serviços devem estar online antes de iniciar o mock:
 
-- **parking-infra**: Redis (`parking_redis`) e rede `parking_global_net`
+- Standalone: sem dependências externas (Redis e MinIO no próprio compose). No stack raiz, usa o Redis/MinIO do raiz.
 - **vc-worker-portaria** (ou qualquer outro consumidor da fila): MinIO (`visioncore_minio`)
 
 ## Configuração

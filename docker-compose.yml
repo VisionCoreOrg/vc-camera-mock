@@ -1,16 +1,67 @@
+# Stack standalone do vc-camera-mock — TESTE ISOLADO apenas.
+# Sobe o mock com Redis e MinIO próprios; os eventos publicados acumulam
+# na fila local (não há worker consumindo). Para o sistema completo, use
+# o compose raiz do workspace (../docker-compose.dev.yml).
+
 services:
-  camera_mock:
+  redis:
+    image: redis:7-alpine
+    restart: "no"
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD ausente no .env - copie de .env.example}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD ausente no .env - copie de .env.example}
+    healthcheck:
+      test: ["CMD", "sh", "-c", "REDISCLI_AUTH=$${REDIS_PASSWORD} redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  minio:
+    image: minio/minio:latest
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER ausente no .env - copie de .env.example}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD ausente no .env - copie de .env.example}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  minio_init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER ausente no .env - copie de .env.example}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD ausente no .env - copie de .env.example}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+        mc mb --ignore-existing local/plate-bucket &&
+        mc anonymous set download local/plate-bucket &&
+        echo 'Bucket plate-bucket pronto.'
+      "
+
+  mock:
     build: .
-    container_name: vc_camera_mock
     restart: "no"
     env_file:
       - .env
+    environment:
+      # Hostnames deste stack — pinados para o .env não quebrá-los
+      REDIS_HOST: redis
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_BUCKET_NAME: plate-bucket
+      REDIS_QUEUE: camera:portaria:queue
     volumes:
       # Monta a pasta local de imagens como somente-leitura dentro do container
       - ./dataset:/app/dataset:ro
-    networks:
-      - parking_global_net
-
-networks:
-  parking_global_net:
-    external: true
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
