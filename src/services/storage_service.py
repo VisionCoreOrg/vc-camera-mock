@@ -8,6 +8,9 @@ from src.config import (
     BUCKET_NAME,
     MINIO_DATASET_PREFIX,
 )
+from src.core.logger import configurar_logger
+
+logger = configurar_logger("StorageService")
 
 
 def _get_s3_client():
@@ -39,8 +42,8 @@ def upload_frame(frame_path: Path) -> str | None:
             key,
             ExtraArgs={"ContentType": "image/jpeg"},
         )
-        print(f"[STORAGE] Frame enviado → {BUCKET_NAME}/{key}")
+        logger.info(f"Frame enviado → {BUCKET_NAME}/{key}")
         return key
     except Exception as e:
-        print(f"[STORAGE] Erro ao enviar frame '{frame_path.name}': {e}")
+        logger.error(f"Erro ao enviar frame '{frame_path.name}': {e}")
         return None

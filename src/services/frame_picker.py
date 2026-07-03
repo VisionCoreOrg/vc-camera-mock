@@ -1,6 +1,9 @@
 import random
 from pathlib import Path
 from src.config import DATASET_PATH, FRAME_MODE
+from src.core.logger import configurar_logger
+
+logger = configurar_logger("FramePicker")
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
@@ -25,10 +28,7 @@ class FramePicker:
                 "Adicione imagens ao diretório dataset/ antes de iniciar."
             )
 
-        print(
-            f"[CAMERA] Dataset carregado: {len(self._frames)} imagens "
-            f"(modo: {self._mode})"
-        )
+        logger.info(f"Dataset carregado: {len(self._frames)} imagens (modo: {self._mode})")
 
     def _load_frames(self) -> list[Path]:
         """Carrega e ordena todas as imagens suportadas no DATASET_PATH."""

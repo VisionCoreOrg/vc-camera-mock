@@ -2,6 +2,9 @@ import json
 import time
 import redis
 from src.config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_QUEUE
+from src.core.logger import configurar_logger
+
+logger = configurar_logger("RedisService")
 
 
 def _create_client() -> redis.Redis:
@@ -23,10 +26,10 @@ def connect_with_retry(retries: int = 10, wait: int = 3) -> redis.Redis:
         try:
             client = _create_client()
             client.ping()
-            print(f"[REDIS] Conectado em {REDIS_HOST}:{REDIS_PORT}")
+            logger.info(f"Conectado em {REDIS_HOST}:{REDIS_PORT}")
             return client
         except redis.exceptions.ConnectionError as e:
-            print(f"[REDIS] Tentativa {i}/{retries} — indisponível: {e}")
+            logger.warning(f"Tentativa {i}/{retries} — Redis indisponível: {e}")
             if i < retries:
                 time.sleep(wait)
     raise RuntimeError(f"[REDIS] Não foi possível conectar após {retries} tentativas.")
@@ -52,4 +55,4 @@ def publish_frame_event(
         }
     )
     client.lpush(REDIS_QUEUE, payload)
-    print(f"[REDIS] Evento publicado → {REDIS_QUEUE} | path={path}")
+    logger.info(f"Evento publicado → {REDIS_QUEUE} | path={path}")
