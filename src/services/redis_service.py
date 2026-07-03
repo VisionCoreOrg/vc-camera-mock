@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime, timezone
 import redis
 from src.config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_QUEUE
 from src.core.logger import configurar_logger
@@ -56,3 +57,25 @@ def publish_frame_event(
     )
     client.lpush(REDIS_QUEUE, payload)
     logger.info(f"Evento publicado → {REDIS_QUEUE} | path={path}")
+
+
+# ── Controle remoto do mock ───────────────────────────────────────────
+# Contrato compartilhado com o vc-api-core (spec da Rodada 3): a API
+# escreve a flag de estado; o mock publica o heartbeat.
+CHAVE_MOCK_ESTADO = "camera:portaria:mock:estado"
+CHAVE_MOCK_HEARTBEAT = "camera:portaria:mock:heartbeat"
+VALOR_LIGADO = "ligado"
+
+
+def mock_ligado(client: redis.Redis) -> bool:
+    """True se o painel administrativo ligou a câmera simulada."""
+    return client.get(CHAVE_MOCK_ESTADO) == VALOR_LIGADO
+
+
+def publicar_heartbeat(client: redis.Redis, ttl_segundos: int) -> None:
+    """Sinal de vida do mock: chave com TTL lida pelo status da API."""
+    client.set(
+        CHAVE_MOCK_HEARTBEAT,
+        datetime.now(timezone.utc).isoformat(),
+        ex=ttl_segundos,
+    )

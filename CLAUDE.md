@@ -27,7 +27,7 @@ dataset/                       # Imagens de entrada (.jpg/.jpeg/.png)
 ```
 dataset/ → upload MinIO (dataset/<filename>) → LPUSH camera:portaria:queue
                                                    ↓
-                                          vc-worker-portaria (BRPOP)
+                                          vc-worker-portaria (BLMOVE)
 ```
 
 A cada `INTERVAL_SECONDS`, o loop:
@@ -37,6 +37,19 @@ A cada `INTERVAL_SECONDS`, o loop:
    ```json
    { "path": "dataset/frame.jpg", "camera_id": "...", "timestamp": "..." }
    ```
+
+## Controle remoto (flag no Redis)
+
+O mock roda sempre, mas só publica frames quando ligado pelo painel
+administrativo (o vc-api-core escreve a flag de estado):
+
+| Chave | Valores | Quem escreve | Quem lê |
+|-------|---------|--------------|---------|
+| `camera:portaria:mock:estado` | `ligado` / `desligado` (ausente = desligado) | vc-api-core | mock |
+| `camera:portaria:mock:heartbeat` | timestamp ISO com TTL | mock (a cada iteração) | vc-api-core |
+
+Desligado, o loop dorme 1s entre checagens sem publicar. Não existe mais
+arquivo de flag local nem dependência de `docker start/stop`.
 
 ## Variáveis de Ambiente (.env)
 
@@ -87,6 +100,7 @@ docker compose up --build
 
 ## Padrões do Projeto
 
-- Sem servidor HTTP — não tem healthcheck
+- Sem servidor HTTP — o sinal de vida é o heartbeat no Redis (chave com TTL)
 - Conexão Redis com retry automático (10 tentativas, 3s de intervalo)
 - O `requirements.txt` contém apenas dependências reais do projeto (sem `pip freeze` de sistema)
+- Logging estruturado via src/core/logger.py (nunca print())
