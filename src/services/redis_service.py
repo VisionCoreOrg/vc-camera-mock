@@ -68,14 +68,35 @@ VALOR_LIGADO = "ligado"
 
 
 def mock_ligado(client: redis.Redis) -> bool:
-    """True se o painel administrativo ligou a câmera simulada."""
-    return client.get(CHAVE_MOCK_ESTADO) == VALOR_LIGADO
+    """
+    True se o painel administrativo ligou a câmera simulada.
+
+    Numa falha transitória do Redis, assume desligado (falha segura) e
+    aguarda um pouco antes do próximo ciclo do loop — evita derrubar o
+    processo (services rodam com restart: "no") e evita um loop de erro
+    a quente enquanto o Redis está fora do ar.
+    """
+    try:
+        return client.get(CHAVE_MOCK_ESTADO) == VALOR_LIGADO
+    except redis.exceptions.RedisError as e:
+        logger.error(f"Erro ao consultar estado do mock no Redis: {e}")
+        time.sleep(1.0)
+        return False
 
 
 def publicar_heartbeat(client: redis.Redis, ttl_segundos: int) -> None:
-    """Sinal de vida do mock: chave com TTL lida pelo status da API."""
-    client.set(
-        CHAVE_MOCK_HEARTBEAT,
-        datetime.now(timezone.utc).isoformat(),
-        ex=ttl_segundos,
-    )
+    """
+    Sinal de vida do mock: chave com TTL lida pelo status da API.
+
+    Numa falha transitória do Redis, apenas loga e segue — o próprio loop
+    principal tenta novamente no próximo ciclo, sem precisar matar o
+    processo por causa de uma escrita de heartbeat que falhou.
+    """
+    try:
+        client.set(
+            CHAVE_MOCK_HEARTBEAT,
+            datetime.now(timezone.utc).isoformat(),
+            ex=ttl_segundos,
+        )
+    except redis.exceptions.RedisError as e:
+        logger.error(f"Erro ao publicar heartbeat no Redis: {e}")
